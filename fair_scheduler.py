@@ -13,9 +13,39 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import multiprocessing as mp
-from multiprocessing import Queue
-import os
+USE_MULTIPROCESSING = True
+
+
+class FakeProcess():
+    """
+    Dummy process
+    """
+
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs={}, *, daemon=None):
+        self.target = target
+        self.args = args
+        self.kwargs = kwargs
+
+    def start(self):
+        self.target(*self.args, **self.kwargs)
+
+    def terminate(self):
+        pass
+
+    def join(self):
+        pass
+
+if USE_MULTIPROCESSING:
+    from multiprocessing import Process
+else:
+    import warnings
+
+    warnings.warn("fair_scheduler: using single process mode! Are you sure this is OK? \n "
+                  "This should really be used only while profiling.")
+    Process = FakeProcess
+
+
+from multiprocessing import Queue, cpu_count
 
 
 def _proc_f(function, results_q, pid, args, kwargs):
@@ -33,7 +63,7 @@ def schedule_workers(
         function,
         args_list,
         with_kwargs=False,
-        max_processes=mp.cpu_count(),
+        max_processes=cpu_count(),
         forward_exceptions=True):
     """
     Somewhat similar to the map() builtin function, apply function to every item of args_list and return a list of the
@@ -60,7 +90,7 @@ def schedule_workers(
     results = list()
 
     def new_process(pid, args, kwargs):
-        new_proc = mp.Process(target=_proc_f, args=(function, results_q, pid, args, kwargs))
+        new_proc = Process(target=_proc_f, args=(function, results_q, pid, args, kwargs))
         new_proc.start()
         processes[pid] = new_proc
 
