@@ -13,11 +13,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import unittest
-import time
 import random
+import time
+import unittest
 from unittest.mock import Mock, patch
-from fair_scheduler import schedule_workers, _proc_f, FakeProcess
+
+from multiprocessing_scheduler import schedule_workers, _proc_f, FakeProcess
 
 
 class CrashException(Exception):
@@ -106,23 +107,23 @@ class Test_schedule_workers(unittest.TestCase):
 
 
 class Test_schedule_workers_no_multiprocessing(unittest.TestCase):
-    @patch("fair_scheduler.Process", FakeProcess)
+    @patch("multiprocessing_scheduler.Process", FakeProcess)
     def test_all_jobs_are_scheduled(self):
         results = schedule_workers(return_args, list(zip(range(10))))
         self.assertEqual(len(results), 10)
 
-    @patch("fair_scheduler.Process", FakeProcess)
+    @patch("multiprocessing_scheduler.Process", FakeProcess)
     def test_one_arg(self):
         results = schedule_workers(return_args, list(zip(range(100))))
         self.assertEqual(sorted(results, key=lambda x: x[0]), list(zip(range(100))))
 
-    @patch("fair_scheduler.Process", FakeProcess)
+    @patch("multiprocessing_scheduler.Process", FakeProcess)
     def test_multiple_args(self):
         args = list(zip(range(100), range(100)))
         results = schedule_workers(return_args, args)
         self.assertEqual(sorted(results, key=lambda x: x[0]), args)
 
-    @patch("fair_scheduler.Process", FakeProcess)
+    @patch("multiprocessing_scheduler.Process", FakeProcess)
     def test_kwargs(self):
         args = list(zip(range(10)))
         kwargs = [{'thekwarg': i} for i in args]
@@ -133,22 +134,22 @@ class Test_schedule_workers_no_multiprocessing(unittest.TestCase):
         for r in results:
             self.assertEqual(r[0], r[1]['thekwarg'])
 
-    @patch("fair_scheduler.Process", FakeProcess)
+    @patch("multiprocessing_scheduler.Process", FakeProcess)
     def test_exceptions_are_forwarded(self):
         with self.assertRaises(CrashException):
             results = schedule_workers(crash, list(zip(range(10))))
 
-    @patch("fair_scheduler.Process", FakeProcess)
+    @patch("multiprocessing_scheduler.Process", FakeProcess)
     def test_exceptions_are_masked(self):
         schedule_workers(crash, zip(range(10)), forward_exceptions=False)
 
-    @patch("fair_scheduler.Process", FakeProcess)
+    @patch("multiprocessing_scheduler.Process", FakeProcess)
     def test_process_limit_is_respected(self):
         # Limiting to 1 process must ensure results are ordered
         results = schedule_workers(return_args, list(zip(range(100))), max_processes=1)
         self.assertEqual(results, list(zip(range(100))))
 
-    @patch("fair_scheduler.Process", FakeProcess)
+    @patch("multiprocessing_scheduler.Process", FakeProcess)
     def test_is_not_multiprocessing(self):
         results = schedule_workers(return_args, list(zip(range(200))), max_processes=100)
         self.assertEqual(sorted(results, key=lambda x: x[0]), list(zip(range(200))))
