@@ -28,9 +28,12 @@ class CrashException(Exception):
         else:
             return False
 
+    def __hash__(self):
+        return id(self)
+
 
 def return_args(*args, **kwargs):
-    time.sleep(random.random() * 0.1)
+    time.sleep(random.random() * 0.01)
     return args
 
 
@@ -57,9 +60,21 @@ class Test_proc_f(unittest.TestCase):
         self.res_q.put.assert_called_once_with(expected)
 
     def test_exception_is_handled(self):
-        expected = {'pid': 10, 'exception': CrashException("ouch!"), 'result': None}
+        expected = {'pid': 10, 'exception': [CrashException("ouch!"), 'stacktrace'], 'result': None}
         _proc_f(crash, self.res_q, 10, (), {})
-        self.res_q.put.assert_called_once_with(expected)
+
+        self.assertEqual(len(self.res_q.put.call_args_list), 1)
+
+        called_args = self.res_q.put.call_args_list[0][0][0]
+
+        self.assertEqual(set(called_args.keys()), set(expected.keys()))
+        self.assertEqual(called_args['pid'], expected['pid'])
+        self.assertEqual(called_args['result'], expected['result'])
+        raised_e, stacktrace = called_args['exception']
+        self.assertEqual(raised_e, expected['exception'][0])
+        self.assertTrue('test_multiprocessing_scheduler.py' in stacktrace)
+        self.assertTrue('in crash' in stacktrace)
+        self.assertTrue('raise CrashException("ouch!")' in stacktrace)
 
 
 class Test_schedule_workers(unittest.TestCase):

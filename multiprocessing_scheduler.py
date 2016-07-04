@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import sys
+import traceback
 USE_MULTIPROCESSING = True
 
 
@@ -54,7 +56,9 @@ def _proc_f(function, results_q, pid, args, kwargs):
     try:
         retdict['result'] = function(*args, **kwargs)
     except Exception as e:
-        retdict['exception'] = e
+        e_type, e_val, tb = sys.exc_info()
+        stacktrace = '\n'.join(traceback.format_tb(tb))
+        retdict['exception'] = [e, stacktrace]
     finally:
         results_q.put(retdict)
 
@@ -82,7 +86,8 @@ def schedule_workers(
     :param max_processes: spawn at most max_processes parallel processes.
     :param forward_exceptions: if False, exceptions raised by function are ignored. If True (the default),
            as soon as a process rises an exception, all other running processes are terminated and the exception
-           is rised.
+           is rised. A string containing the stacktrace of the original exception is added to the original list of
+           exception arguments, to facilitate tracking the origin of such exception. 
     :return: a list consisting of tuples containing items from all iterables. 
     """
     processes = dict()
@@ -102,7 +107,9 @@ def schedule_workers(
             if forward_exceptions:
                 for pid, proc in processes.items():
                     proc.terminate()
-                raise result['exception']
+                e, stacktrace = result['exception']
+                e.args += (stacktrace,)
+                raise e
 
         processes[result['pid']].join()
         processes[result['pid']].terminate()
