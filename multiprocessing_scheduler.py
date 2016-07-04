@@ -87,7 +87,7 @@ def schedule_workers(
     :param forward_exceptions: if False, exceptions raised by function are ignored. If True (the default),
            as soon as a process rises an exception, all other running processes are terminated and the exception
            is rised. A string containing the stacktrace of the original exception is added to the original list of
-           exception arguments, to facilitate tracking the origin of such exception. 
+           exception arguments, to facilitate tracking the origin of such exception.
     :return: a list consisting of tuples containing items from all iterables. 
     """
     processes = dict()
@@ -111,9 +111,10 @@ def schedule_workers(
                 e.args += (stacktrace,)
                 raise e
 
-        processes[result['pid']].join()
-        processes[result['pid']].terminate()
-        del processes[result['pid']]
+        pid = result['pid']
+        processes[pid].join()
+        processes[pid].terminate()
+        del processes[pid]
 
     for pid, job in enumerate(args_list):
         if with_kwargs:
